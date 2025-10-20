@@ -32,7 +32,9 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// Add API documentation services
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -71,6 +73,8 @@ if (string.IsNullOrEmpty(skipMigrations) || skipMigrations.ToLower() != "true")
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 // Register custom middleware (before authentication)
@@ -84,5 +88,14 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Health check endpoints
+app.MapGet("/", () => "Server is running")
+    .WithName("HealthCheck")
+    .WithOpenApi();
+
+app.MapGet("/ping", () => "pong")
+    .WithName("Ping")
+    .WithOpenApi();
 
 app.Run();
