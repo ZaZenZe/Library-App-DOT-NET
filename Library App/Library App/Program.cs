@@ -1,5 +1,6 @@
 using Library_App.Data;
 using Library_App.Services;
+using Library_App.Middleware;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 
@@ -63,6 +64,12 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+// Register custom middleware (before authentication)
+app.UseMiddleware<RequestTimingMiddleware>();
+app.UseMiddleware<IsbnValidationMiddleware>();
+app.UseMiddleware<AuthorsLoggingMiddleware>();
+app.UseMiddleware<BooksLoggingMiddleware>();
 
 app.UseHttpsRedirection();
 
