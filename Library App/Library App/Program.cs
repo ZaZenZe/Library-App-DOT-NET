@@ -1,4 +1,5 @@
 using Library_App.Data;
+using Library_App.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 
@@ -12,6 +13,11 @@ var connectionString = Environment.GetEnvironmentVariable("Library_AppContextCon
 
 builder.Services.AddDbContext<Library_AppContext>(options =>
     options.UseSqlServer(connectionString));
+
+// Register services with dependency injection
+builder.Services.AddScoped<IAuthorService, AuthorService>();
+builder.Services.AddScoped<IPublisherService, PublisherService>();
+builder.Services.AddScoped<IBookService, BookService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

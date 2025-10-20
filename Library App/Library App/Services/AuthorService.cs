@@ -1,0 +1,52 @@
+using Library_App.Data;
+using Library_App.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace Library_App.Services;
+
+public class AuthorService : IAuthorService
+{
+    private readonly Library_AppContext _context;
+
+    public AuthorService(Library_AppContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<List<Author>> GetAllAsync()
+    {
+        return await _context.Authors
+            .Include(a => a.Books)
+            .ToListAsync();
+    }
+
+    public async Task<Author?> GetAsync(int id)
+    {
+        return await _context.Authors
+            .Include(a => a.Books)
+            .FirstOrDefaultAsync(a => a.Id == id);
+    }
+
+    public async Task<Author> CreateAsync(string name)
+    {
+        var author = new Author { Name = name };
+        _context.Authors.Add(author);
+        await _context.SaveChangesAsync();
+        return author;
+    }
+
+    public async Task<Author> GetByNameOrCreateAsync(string name)
+    {
+        var trimmedName = name.Trim();
+        
+        var existingAuthor = await _context.Authors
+            .FirstOrDefaultAsync(a => a.Name == trimmedName);
+        
+        if (existingAuthor != null)
+        {
+            return existingAuthor;
+        }
+
+        return await CreateAsync(trimmedName);
+    }
+}
