@@ -9,15 +9,18 @@ public class BookService : IBookService
     private readonly Library_AppContext _context;
     private readonly IAuthorService _authorService;
     private readonly IPublisherService _publisherService;
+    private readonly IGoogleBooksService _googleBooksService;
 
     public BookService(
         Library_AppContext context, 
         IAuthorService authorService, 
-        IPublisherService publisherService)
+        IPublisherService publisherService,
+        IGoogleBooksService googleBooksService)
     {
         _context = context;
         _authorService = authorService;
         _publisherService = publisherService;
+        _googleBooksService = googleBooksService;
     }
 
     public async Task<List<Book>> GetAllAsync()
@@ -64,8 +67,36 @@ public class BookService : IBookService
 
     public async Task<Book?> ImportByIsbnAsync(string isbn)
     {
-        // To be implemented later with Google Books API integration
-        await Task.CompletedTask;
-        return null;
+        // Check if book with ISBN already exists
+        var existingBook = await GetByIsbnAsync(isbn);
+        if (existingBook != null)
+        {
+            return existingBook;
+        }
+
+        // Call Google Books API to fetch book info
+        var bookInfo = await _googleBooksService.GetByIsbnAsync(isbn);
+        if (bookInfo == null)
+        {
+            return null;
+        }
+
+        // Get or create author (use first author from the list)
+        var authorName = bookInfo.Authors.FirstOrDefault() ?? "Unknown Author";
+        var author = await _authorService.GetByNameOrCreateAsync(authorName);
+
+        // Get or create publisher if available
+        int? publisherId = null;
+        if (!string.IsNullOrEmpty(bookInfo.Publisher))
+        {
+            var publisher = await _publisherService.GetByNameOrCreateAsync(bookInfo.Publisher);
+            publisherId = publisher.Id;
+        }
+
+        // Create and return the book
+        var year = bookInfo.PublishedYear ?? 0;
+        var book = await CreateAsync(bookInfo.Title, year, author.Id, isbn, publisherId);
+        
+        return book;
     }
 }

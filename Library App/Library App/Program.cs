@@ -14,6 +14,9 @@ var connectionString = Environment.GetEnvironmentVariable("Library_AppContextCon
 builder.Services.AddDbContext<Library_AppContext>(options =>
     options.UseSqlServer(connectionString));
 
+// Register HttpClient for GoogleBooksService
+builder.Services.AddHttpClient<IGoogleBooksService, GoogleBooksService>();
+
 // Register services with dependency injection
 builder.Services.AddScoped<IAuthorService, AuthorService>();
 builder.Services.AddScoped<IPublisherService, PublisherService>();
