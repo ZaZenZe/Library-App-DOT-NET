@@ -19,39 +19,77 @@ public class AuthorsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<object>>> GetAuthors()
     {
-        var authors = await _authorService.GetAllAsync();
-        return Ok(authors);
+        try
+        {
+            var authors = await _authorService.GetAllAsync();
+            return Ok(authors);
+        }
+        catch (Exception ex)
+        {
+            return Problem(
+                detail: ex.Message,
+                title: "Error retrieving authors",
+                statusCode: StatusCodes.Status500InternalServerError
+            );
+        }
     }
 
     // GET /authors/{id}
     [HttpGet("{id}")]
     public async Task<ActionResult<object>> GetAuthor(int id)
     {
-        var author = await _authorService.GetAsync(id);
-        
-        if (author == null)
+        try
         {
-            return NotFound();
-        }
+            if (id <= 0)
+            {
+                return BadRequest(new { error = "Invalid author ID. ID must be greater than 0." });
+            }
 
-        return Ok(author);
+            var author = await _authorService.GetAsync(id);
+            
+            if (author == null)
+            {
+                return NotFound(new { error = $"Author with ID {id} not found." });
+            }
+
+            return Ok(author);
+        }
+        catch (Exception ex)
+        {
+            return Problem(
+                detail: ex.Message,
+                title: "Error retrieving author",
+                statusCode: StatusCodes.Status500InternalServerError
+            );
+        }
     }
 
     // POST /authors
     [HttpPost]
     public async Task<ActionResult<object>> CreateAuthor([FromBody] CreateAuthorDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Name))
+        try
         {
-            return BadRequest(new { error = "Name is required and cannot be empty." });
-        }
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return BadRequest(new { error = "Name is required and cannot be empty." });
+            }
 
-        var author = await _authorService.CreateAsync(dto.Name);
-        
-        return CreatedAtAction(
-            nameof(GetAuthor),
-            new { id = author.Id },
-            author
-        );
+            var author = await _authorService.CreateAsync(dto.Name);
+            
+            return CreatedAtAction(
+                nameof(GetAuthor),
+                new { id = author.Id },
+                author
+            );
+        }
+        catch (Exception ex)
+        {
+            return Problem(
+                detail: ex.Message,
+                title: "Error creating author",
+                statusCode: StatusCodes.Status500InternalServerError
+            );
+        }
     }
 }
