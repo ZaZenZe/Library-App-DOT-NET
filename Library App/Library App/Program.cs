@@ -14,8 +14,27 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = Environment.GetEnvironmentVariable("Library_AppContextConnection") 
     ?? builder.Configuration.GetConnectionString("Library_AppContextConnection");
 
+// Throw exception if connection string is missing (required for deployment)
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException(
+        "Connection string 'Library_AppContextConnection' not found. " +
+        "Please set the environment variable 'Library_AppContextConnection' or add it to appsettings.json.");
+}
+
 builder.Services.AddDbContext<Library_AppContext>(options =>
     options.UseSqlServer(connectionString));
+
+// Configure CORS policy for potential frontend integration
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 // Configure ASP.NET Core Identity
 builder.Services.AddDefaultIdentity<IdentityUser>(options => 
@@ -96,6 +115,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Enable CORS
+app.UseCors("AllowAll");
 
 // Register custom middleware (before authentication)
 app.UseMiddleware<RequestTimingMiddleware>();

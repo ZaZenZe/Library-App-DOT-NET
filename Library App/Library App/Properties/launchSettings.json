@@ -4,20 +4,41 @@
     "http": {
       "commandName": "Project",
       "dotnetRunMessages": true,
-      "launchBrowser": false,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
       "applicationUrl": "http://localhost:5171",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Library_AppContextConnection": "Server=(localdb)\\mssqllocaldb;Database=Library_App;Trusted_Connection=True;MultipleActiveResultSets=true"
       }
     },
     "https": {
       "commandName": "Project",
       "dotnetRunMessages": true,
-      "launchBrowser": false,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
       "applicationUrl": "https://localhost:7167;http://localhost:5171",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Library_AppContextConnection": "Server=(localdb)\\mssqllocaldb;Database=Library_App;Trusted_Connection=True;MultipleActiveResultSets=true"
       }
+    },
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Library_AppContextConnection": "Server=(localdb)\\mssqllocaldb;Database=Library_App;Trusted_Connection=True;MultipleActiveResultSets=true"
+      }
+    }
+  },
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:5171",
+      "sslPort": 44300
     }
   }
 }
