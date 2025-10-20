@@ -4,6 +4,7 @@ using Library_App.Middleware;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,25 @@ var connectionString = Environment.GetEnvironmentVariable("Library_AppContextCon
 
 builder.Services.AddDbContext<Library_AppContext>(options =>
     options.UseSqlServer(connectionString));
+
+// Configure ASP.NET Core Identity
+builder.Services.AddDefaultIdentity<IdentityUser>(options => 
+{
+    options.SignIn.RequireConfirmedAccount = true;
+    // Password settings
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequiredLength = 8;
+    // Lockout settings
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.AllowedForNewUsers = true;
+    // User settings
+    options.User.RequireUniqueEmail = true;
+})
+.AddEntityFrameworkStores<Library_AppContext>();
 
 // Register HttpClient for GoogleBooksService
 builder.Services.AddHttpClient<IGoogleBooksService, GoogleBooksService>();
@@ -85,6 +105,8 @@ app.UseMiddleware<BooksLoggingMiddleware>();
 
 app.UseHttpsRedirection();
 
+// Add authentication and authorization middleware
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
