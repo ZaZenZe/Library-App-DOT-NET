@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,17 @@ var builder = WebApplication.CreateBuilder(args);
 // Configure database context - prioritize environment variables over appsettings.json
 var connectionString = Environment.GetEnvironmentVariable("Library_AppContextConnection") 
     ?? builder.Configuration.GetConnectionString("Library_AppContextConnection");
+
+// DEBUG: Log what connection string is being used
+Console.WriteLine("========== CONNECTION STRING DEBUG ==========");
+Console.WriteLine($"Environment Variable: {Environment.GetEnvironmentVariable("Library_AppContextConnection") ?? "NOT SET"}");
+Console.WriteLine($"From Config: {builder.Configuration.GetConnectionString("Library_AppContextConnection") ?? "NOT SET"}");
+if (!string.IsNullOrEmpty(connectionString))
+{
+    var preview = connectionString.Length > 100 ? connectionString.Substring(0, 100) + "..." : connectionString;
+    Console.WriteLine($"Final Connection String: {preview}");
+}
+Console.WriteLine("============================================");
 
 // Throw exception if connection string is missing (required for deployment)
 if (string.IsNullOrEmpty(connectionString))
@@ -23,7 +35,11 @@ if (string.IsNullOrEmpty(connectionString))
 }
 
 builder.Services.AddDbContext<Library_AppContext>(options =>
-    options.UseSqlServer(connectionString));
+    options
+        .UseSqlServer(connectionString)
+        // Suppress the PendingModelChangesWarning so migrations can apply on an empty DB
+        .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
+);
 
 // Configure CORS policy for potential frontend integration
 builder.Services.AddCors(options =>
@@ -87,12 +103,19 @@ if (string.IsNullOrEmpty(skipMigrations) || skipMigrations.ToLower() != "true")
         using var scope = app.Services.CreateScope();
         var services = scope.ServiceProvider;
         var context = services.GetRequiredService<Library_AppContext>();
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        
+        logger.LogInformation("Starting database migration...");
         
         // Apply pending migrations
         await context.Database.MigrateAsync();
         
+        logger.LogInformation("Database migration completed successfully.");
+        
         // Seed initial data
+        logger.LogInformation("Starting data seeding...");
         await DbInitializer.SeedAsync(context);
+        logger.LogInformation("Data seeding completed successfully.");
     }
     catch (SqlException ex) when (ex.Number == 40615)
     {
@@ -100,6 +123,16 @@ if (string.IsNullOrEmpty(skipMigrations) || skipMigrations.ToLower() != "true")
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
         logger.LogWarning("Azure SQL firewall blocked the connection. Please add your IP address to the firewall rules.");
         logger.LogWarning("Error: {ErrorMessage}", ex.Message);
+        logger.LogWarning("To fix this:");
+        logger.LogWarning("1. Go to Azure Portal ? SQL Database ? Set server firewall");
+        logger.LogWarning("2. Add your client IP address");
+        logger.LogWarning("3. Or enable 'Allow Azure services and resources to access this server'");
+    }
+    catch (SqlException ex)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "SQL error occurred during migration or seeding. Error Number: {ErrorNumber}", ex.Number);
+        logger.LogError("SQL Error: {SqlError}", ex.Message);
     }
     catch (Exception ex)
     {
