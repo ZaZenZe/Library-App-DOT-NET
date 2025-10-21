@@ -6,12 +6,11 @@ on:
       - master
 
 permissions:
-  contents: read  # id-token removed because we are using SP JSON
-  # OIDC not needed
+  contents: read
 
 env:
   AZURE_WEBAPP_NAME: LibraryAppRickySayan
-  AZURE_WEBAPP_PACKAGE_PATH: "Library App/publish"
+  AZURE_WEBAPP_PACKAGE_PATH: "./publish"
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 9.0.x
   WORKING_DIRECTORY: "Library App"
@@ -65,3 +64,8 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      - name: Azure logout
+        if: always()
+        run: |
+          az logout
