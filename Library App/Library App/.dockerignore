@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/node_modules/
+Dockerfile*
+.dockerignore
+.git
+.gitignore
+**/*.user
+**/*.suo
+**/*.swp
+**/*.tmp
+**/*.log
+**/*.cache
+**/*.bak
+**/*.DS_Store
