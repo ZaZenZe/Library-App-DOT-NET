@@ -128,23 +128,21 @@ if (!string.IsNullOrEmpty(connectionString) &&
         
    // Apply pending migrations
         await context.Database.MigrateAsync();
+    
+ logger.LogInformation("Database migration completed successfully.");
         
-        logger.LogInformation("Database migration completed successfully.");
-        
-        // Seed initial data
-      logger.LogInformation("Starting data seeding...");
-        await DbInitializer.SeedAsync(context);
-  logger.LogInformation("Data seeding completed successfully.");
+        // Database seeding removed - database will be empty with only table structure
+        logger.LogInformation("Database is ready. No seed data added.");
     }
     catch (SqlException ex) when (ex.Number == 40615)
     {
         // Azure SQL firewall error
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        logger.LogWarning("Azure SQL firewall blocked the connection. Please add your IP address to the firewall rules.");
+      logger.LogWarning("Azure SQL firewall blocked the connection. Please add your IP address to the firewall rules.");
       logger.LogWarning("Error: {ErrorMessage}", ex.Message);
  logger.LogWarning("To fix this:");
 logger.LogWarning("1. Go to Azure Portal ? SQL Database ? Set server firewall");
-        logger.LogWarning("2. Add your client IP address");
+ logger.LogWarning("2. Add your client IP address");
         logger.LogWarning("3. Or enable 'Allow Azure services and resources to access this server'");
     }
     catch (SqlException ex)
