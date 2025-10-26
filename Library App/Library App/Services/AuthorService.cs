@@ -16,14 +16,22 @@ public class AuthorService : IAuthorService
     public async Task<List<Author>> GetAllAsync()
     {
         return await _context.Authors
+            .AsNoTracking()
             .Include(a => a.Books)
+            .ThenInclude(b => b.Publisher)
+            .Include(a => a.Books)
+            .ThenInclude(b => b.Details)
             .ToListAsync();
     }
 
     public async Task<Author?> GetAsync(int id)
     {
         return await _context.Authors
+            .AsNoTracking()
             .Include(a => a.Books)
+            .ThenInclude(b => b.Publisher)
+            .Include(a => a.Books)
+            .ThenInclude(b => b.Details)
             .FirstOrDefaultAsync(a => a.Id == id);
     }
 

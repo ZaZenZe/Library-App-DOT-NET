@@ -26,6 +26,7 @@ public class BookService : IBookService
     public async Task<List<Book>> GetAllAsync()
     {
         return await _context.Books
+            .AsNoTracking()
             .Include(b => b.Author)
             .Include(b => b.Publisher)
             .Include(b => b.Details)
@@ -35,6 +36,7 @@ public class BookService : IBookService
     public async Task<Book?> GetAsync(int id)
     {
         return await _context.Books
+            .AsNoTracking()
             .Include(b => b.Author)
             .Include(b => b.Publisher)
             .Include(b => b.Details)
@@ -44,6 +46,7 @@ public class BookService : IBookService
     public async Task<Book?> GetByIsbnAsync(string isbn)
     {
         return await _context.Books
+            .AsNoTracking()
             .Include(b => b.Author)
             .Include(b => b.Publisher)
             .Include(b => b.Details)
@@ -65,13 +68,21 @@ public class BookService : IBookService
         await _context.SaveChangesAsync();
         
         // Reload with navigation properties
-        return (await GetAsync(book.Id))!;
+        return (await _context.Books
+            .Include(b => b.Author)
+            .Include(b => b.Publisher)
+            .Include(b => b.Details)
+            .FirstAsync(b => b.Id == book.Id))!;
     }
 
     public async Task<Book?> ImportByIsbnAsync(string isbn)
     {
         // Check if book with ISBN already exists
-        var existingBook = await GetByIsbnAsync(isbn);
+        var existingBook = await _context.Books
+            .Include(b => b.Author)
+            .Include(b => b.Publisher)
+            .Include(b => b.Details)
+            .FirstOrDefaultAsync(b => b.Isbn == isbn);
         if (existingBook != null)
         {
             return existingBook;
@@ -115,6 +126,11 @@ public class BookService : IBookService
         _context.BookDetails.Add(details);
         await _context.SaveChangesAsync();
 
-        return await GetAsync(book.Id);
+        // Return the created book including details
+        return await _context.Books
+            .Include(b => b.Author)
+            .Include(b => b.Publisher)
+            .Include(b => b.Details)
+            .FirstAsync(b => b.Id == book.Id);
     }
 }
