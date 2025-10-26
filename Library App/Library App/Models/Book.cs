@@ -27,4 +27,7 @@ public class Book
     // Navigation properties
     public Author? Author { get; set; }
     public Publisher? Publisher { get; set; }
+
+    // One-to-one details
+    public BookDetails? Details { get; set; }
 }

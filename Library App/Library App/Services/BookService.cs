@@ -28,6 +28,7 @@ public class BookService : IBookService
         return await _context.Books
             .Include(b => b.Author)
             .Include(b => b.Publisher)
+            .Include(b => b.Details)
             .ToListAsync();
     }
 
@@ -36,6 +37,7 @@ public class BookService : IBookService
         return await _context.Books
             .Include(b => b.Author)
             .Include(b => b.Publisher)
+            .Include(b => b.Details)
             .FirstOrDefaultAsync(b => b.Id == id);
     }
 
@@ -44,6 +46,7 @@ public class BookService : IBookService
         return await _context.Books
             .Include(b => b.Author)
             .Include(b => b.Publisher)
+            .Include(b => b.Details)
             .FirstOrDefaultAsync(b => b.Isbn == isbn);
     }
 
@@ -93,10 +96,25 @@ public class BookService : IBookService
             publisherId = publisher.Id;
         }
 
-        // Create and return the book
-        var year = bookInfo.PublishedYear ?? 0;
+        // Create the book
+        var year = bookInfo.PublishedYear ??0;
         var book = await CreateAsync(bookInfo.Title, year, author.Id, isbn, publisherId);
-        
-        return book;
+
+        // Save details
+        var details = new BookDetails
+        {
+            BookId = book.Id,
+            Description = bookInfo.Description,
+            AverageRating = bookInfo.AverageRating,
+            SmallThumbnail = bookInfo.SmallThumbnail,
+            Thumbnail = bookInfo.Thumbnail,
+            Small = bookInfo.Small,
+            Medium = bookInfo.Medium,
+            Large = bookInfo.Large
+        };
+        _context.BookDetails.Add(details);
+        await _context.SaveChangesAsync();
+
+        return await GetAsync(book.Id);
     }
 }

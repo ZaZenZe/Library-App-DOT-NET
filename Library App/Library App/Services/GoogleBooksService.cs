@@ -89,7 +89,40 @@ public class GoogleBooksService : IGoogleBooksService
                 }
             }
 
-            return new GoogleBookInfo(title, authors, publisher, publishedYear);
+            // Extract description
+            string? description = null;
+            if (volumeInfo.TryGetProperty("description", out var descriptionElement))
+            {
+                description = descriptionElement.GetString();
+            }
+
+            // Extract averageRating
+            double? averageRating = null;
+            if (volumeInfo.TryGetProperty("averageRating", out var averageRatingElement))
+            {
+                if (averageRatingElement.ValueKind == JsonValueKind.Number && averageRatingElement.TryGetDouble(out var rating))
+                {
+                    averageRating = rating;
+                }
+            }
+
+            // Extract imageLinks
+            string? smallThumbnail = null;
+            string? thumbnail = null;
+            string? small = null;
+            string? medium = null;
+            string? large = null;
+            if (volumeInfo.TryGetProperty("imageLinks", out var imageLinks))
+            {
+                smallThumbnail = imageLinks.TryGetProperty("smallThumbnail", out var st) ? st.GetString() : null;
+                thumbnail = imageLinks.TryGetProperty("thumbnail", out var t) ? t.GetString() : null;
+                small = imageLinks.TryGetProperty("small", out var s) ? s.GetString() : null;
+                medium = imageLinks.TryGetProperty("medium", out var m) ? m.GetString() : null;
+                large = imageLinks.TryGetProperty("large", out var l) ? l.GetString() : null;
+            }
+
+            return new GoogleBookInfo(title, authors, publisher, publishedYear, description, averageRating,
+                smallThumbnail, thumbnail, small, medium, large);
         }
         catch (HttpRequestException ex)
         {
