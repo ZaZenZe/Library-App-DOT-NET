@@ -92,4 +92,69 @@ public class AuthorsController : ControllerBase
             );
         }
     }
+
+    // PUT /authors/{id}
+    [HttpPut("{id}")]
+    public async Task<ActionResult<object>> UpdateAuthor(int id, [FromBody] UpdateAuthorDto dto)
+    {
+        try
+        {
+            if (id <= 0)
+            {
+                return BadRequest(new { error = "Invalid author ID. ID must be greater than 0." });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return BadRequest(new { error = "Name is required and cannot be empty." });
+            }
+
+            var author = await _authorService.UpdateAsync(id, dto.Name);
+            
+            if (author == null)
+            {
+                return NotFound(new { error = $"Author with ID {id} not found." });
+            }
+
+            return Ok(author);
+        }
+        catch (Exception ex)
+        {
+            return Problem(
+                detail: ex.Message,
+                title: "Error updating author",
+                statusCode: StatusCodes.Status500InternalServerError
+            );
+        }
+    }
+
+    // DELETE /authors/{id}
+    [HttpDelete("{id}")]
+    public async Task<ActionResult> DeleteAuthor(int id)
+    {
+        try
+        {
+            if (id <= 0)
+            {
+                return BadRequest(new { error = "Invalid author ID. ID must be greater than 0." });
+            }
+
+            var result = await _authorService.DeleteAsync(id);
+            
+            if (!result)
+            {
+                return NotFound(new { error = $"Author with ID {id} not found." });
+            }
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return Problem(
+                detail: ex.Message,
+                title: "Error deleting author",
+                statusCode: StatusCodes.Status500InternalServerError
+            );
+        }
+    }
 }

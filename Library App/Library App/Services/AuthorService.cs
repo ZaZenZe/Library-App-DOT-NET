@@ -57,4 +57,33 @@ public class AuthorService : IAuthorService
 
         return await CreateAsync(trimmedName);
     }
+
+    public async Task<Author?> UpdateAsync(int id, string name)
+    {
+        var author = await _context.Authors.FindAsync(id);
+        
+        if (author == null)
+        {
+            return null;
+        }
+
+        author.Name = name.Trim();
+        await _context.SaveChangesAsync();
+
+        return await GetAsync(id);
+    }
+
+    public async Task<bool> DeleteAsync(int id)
+    {
+        var author = await _context.Authors.FindAsync(id);
+        
+        if (author == null)
+        {
+            return false;
+        }
+
+        _context.Authors.Remove(author);
+        await _context.SaveChangesAsync();
+        return true;
+    }
 }

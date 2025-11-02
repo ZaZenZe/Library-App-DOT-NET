@@ -41,6 +41,105 @@ public class GoogleBooksService : IGoogleBooksService
             // Get the first item's volume info
             var volumeInfo = items[0].GetProperty("volumeInfo");
 
+            return ParseBookInfo(volumeInfo, isbn);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed when calling Google Books API for ISBN {Isbn}", isbn);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse JSON response from Google Books API for ISBN {Isbn}", isbn);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error when calling Google Books API for ISBN {Isbn}", isbn);
+            return null;
+        }
+    }
+
+    public async Task<List<GoogleBookInfo>> SearchByTitleAsync(string title)
+    {
+        try
+        {
+            // Encode the title for URL
+            var encodedTitle = Uri.EscapeDataString(title);
+            var url = $"https://www.googleapis.com/books/v1/volumes?q=intitle:{encodedTitle}&maxResults=10";
+            var response = await _httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Google Books API returned status code {StatusCode} for title {Title}", 
+                    response.StatusCode, title);
+                return new List<GoogleBookInfo>();
+            }
+
+            var jsonString = await response.Content.ReadAsStringAsync();
+            using var document = JsonDocument.Parse(jsonString);
+            var root = document.RootElement;
+
+            // Check if any items were returned
+            if (!root.TryGetProperty("items", out var items) || items.GetArrayLength() == 0)
+            {
+                _logger.LogInformation("No books found for title {Title}", title);
+                return new List<GoogleBookInfo>();
+            }
+
+            var books = new List<GoogleBookInfo>();
+            foreach (var item in items.EnumerateArray())
+            {
+                var volumeInfo = item.GetProperty("volumeInfo");
+                
+                // Try to extract ISBN from industryIdentifiers
+                string? isbn = null;
+                if (volumeInfo.TryGetProperty("industryIdentifiers", out var identifiers))
+                {
+                    foreach (var identifier in identifiers.EnumerateArray())
+                    {
+                        if (identifier.TryGetProperty("type", out var type))
+                        {
+                            var typeStr = type.GetString();
+                            if (typeStr == "ISBN_13" || typeStr == "ISBN_10")
+                            {
+                                isbn = identifier.TryGetProperty("identifier", out var id) ? id.GetString() : null;
+                                if (isbn != null) break;
+                            }
+                        }
+                    }
+                }
+
+                var bookInfo = ParseBookInfo(volumeInfo, isbn);
+                if (bookInfo != null)
+                {
+                    books.Add(bookInfo);
+                }
+            }
+
+            return books;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed when calling Google Books API for title {Title}", title);
+            return new List<GoogleBookInfo>();
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse JSON response from Google Books API for title {Title}", title);
+            return new List<GoogleBookInfo>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error when calling Google Books API for title {Title}", title);
+            return new List<GoogleBookInfo>();
+        }
+    }
+
+    private GoogleBookInfo? ParseBookInfo(JsonElement volumeInfo, string? isbn)
+    {
+        try
+        {
             // Extract title
             var title = volumeInfo.TryGetProperty("title", out var titleElement) 
                 ? titleElement.GetString() ?? "Unknown Title"
@@ -122,21 +221,11 @@ public class GoogleBooksService : IGoogleBooksService
             }
 
             return new GoogleBookInfo(title, authors, publisher, publishedYear, description, averageRating,
-                smallThumbnail, thumbnail, small, medium, large);
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex, "HTTP request failed when calling Google Books API for ISBN {Isbn}", isbn);
-            return null;
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "Failed to parse JSON response from Google Books API for ISBN {Isbn}", isbn);
-            return null;
+                smallThumbnail, thumbnail, small, medium, large, isbn);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error when calling Google Books API for ISBN {Isbn}", isbn);
+            _logger.LogError(ex, "Error parsing book info from Google Books API");
             return null;
         }
     }

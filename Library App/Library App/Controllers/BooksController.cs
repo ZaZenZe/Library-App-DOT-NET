@@ -24,45 +24,45 @@ public class BooksController : ControllerBase
         try
         {
             var books = await _bookService.GetAllAsync();
-            return Ok(books);
+     return Ok(books);
         }
         catch (Exception ex)
         {
-            return Problem(
-                detail: ex.Message,
+       return Problem(
+ detail: ex.Message,
                 title: "Error retrieving books",
-                statusCode: StatusCodes.Status500InternalServerError
+  statusCode: StatusCodes.Status500InternalServerError
             );
-        }
+    }
     }
 
     // GET /books/{id}
-    [HttpGet("{id}")]
+[HttpGet("{id}")]
     public async Task<ActionResult<object>> GetBook(int id)
     {
-        try
+      try
         {
-            if (id <= 0)
-            {
-                return BadRequest(new { error = "Invalid book ID. ID must be greater than 0." });
+   if (id <= 0)
+    {
+             return BadRequest(new { error = "Invalid book ID. ID must be greater than 0." });
             }
 
-            var book = await _bookService.GetAsync(id);
+     var book = await _bookService.GetAsync(id);
             
-            if (book == null)
-            {
-                return NotFound(new { error = $"Book with ID {id} not found." });
+     if (book == null)
+ {
+  return NotFound(new { error = $"Book with ID {id} not found." });
             }
 
-            return Ok(book);
+    return Ok(book);
         }
         catch (Exception ex)
         {
             return Problem(
-                detail: ex.Message,
-                title: "Error retrieving book",
-                statusCode: StatusCodes.Status500InternalServerError
-            );
+ detail: ex.Message,
+  title: "Error retrieving book",
+      statusCode: StatusCodes.Status500InternalServerError
+   );
         }
     }
 
@@ -70,29 +70,53 @@ public class BooksController : ControllerBase
     [HttpGet("isbn/{isbn}")]
     public async Task<ActionResult<object>> GetBookByIsbn(string isbn)
     {
-        try
+    try
         {
-            if (string.IsNullOrWhiteSpace(isbn))
+          if (string.IsNullOrWhiteSpace(isbn))
             {
-                return BadRequest(new { error = "ISBN cannot be empty." });
+    return BadRequest(new { error = "ISBN cannot be empty." });
             }
 
-            var book = await _bookService.GetByIsbnAsync(isbn);
-            
+    var book = await _bookService.GetByIsbnAsync(isbn);
+     
             if (book == null)
             {
-                return NotFound(new { error = $"Book with ISBN {isbn} not found." });
+ return NotFound(new { error = $"Book with ISBN {isbn} not found." });
             }
 
             return Ok(book);
-        }
+      }
         catch (Exception ex)
-        {
+ {
             return Problem(
                 detail: ex.Message,
                 title: "Error retrieving book by ISBN",
-                statusCode: StatusCodes.Status500InternalServerError
-            );
+        statusCode: StatusCodes.Status500InternalServerError
+    );
+        }
+    }
+
+  // GET /books/search?title={title}
+ [HttpGet("search")]
+    public async Task<ActionResult<IEnumerable<object>>> SearchBooksByTitle([FromQuery] string title)
+  {
+        try
+        {
+ if (string.IsNullOrWhiteSpace(title))
+            {
+   return BadRequest(new { error = "Title parameter is required and cannot be empty." });
+            }
+
+      var books = await _bookService.SearchByTitleAsync(title);
+  return Ok(books);
+        }
+      catch (Exception ex)
+        {
+      return Problem(
+       detail: ex.Message,
+      title: "Error searching books by title",
+        statusCode: StatusCodes.Status500InternalServerError
+     );
         }
     }
 
@@ -102,84 +126,174 @@ public class BooksController : ControllerBase
     {
         try
         {
-            // Validate input
-            if (string.IsNullOrWhiteSpace(dto.Title))
-            {
+   // Validate input
+if (string.IsNullOrWhiteSpace(dto.Title))
+         {
                 return BadRequest(new { error = "Title cannot be empty." });
-            }
+         }
 
-            if (string.IsNullOrWhiteSpace(dto.Isbn))
-            {
-                return BadRequest(new { error = "ISBN cannot be empty." });
-            }
+       if (string.IsNullOrWhiteSpace(dto.Isbn))
+      {
+         return BadRequest(new { error = "ISBN cannot be empty." });
+       }
 
-            if (dto.AuthorId <= 0)
-            {
-                return BadRequest(new { error = "Invalid author ID." });
+       if (dto.AuthorId <= 0)
+{
+      return BadRequest(new { error = "Invalid author ID." });
             }
 
             // Validate that the author exists
-            var author = await _authorService.GetAsync(dto.AuthorId);
-            if (author == null)
-            {
-                return BadRequest(new { error = $"Author with ID {dto.AuthorId} does not exist." });
-            }
+      var author = await _authorService.GetAsync(dto.AuthorId);
+    if (author == null)
+       {
+  return BadRequest(new { error = $"Author with ID {dto.AuthorId} does not exist." });
+    }
 
-            var book = await _bookService.CreateAsync(
-                dto.Title,
-                dto.Year,
-                dto.AuthorId,
-                dto.Isbn,
-                dto.PublisherId
+     var book = await _bookService.CreateAsync(
+          dto.Title,
+    dto.Year,
+           dto.AuthorId,
+          dto.Isbn,
+       dto.PublisherId
             );
 
-            return CreatedAtAction(
-                nameof(GetBook),
-                new { id = book.Id },
-                book
+  return CreatedAtAction(
+    nameof(GetBook),
+     new { id = book.Id },
+          book
             );
         }
         catch (Exception ex)
         {
-            return Problem(
-                detail: ex.Message,
-                title: "Error creating book",
-                statusCode: StatusCodes.Status500InternalServerError
-            );
+     return Problem(
+              detail: ex.Message,
+     title: "Error creating book",
+    statusCode: StatusCodes.Status500InternalServerError
+   );
         }
-    }
+ }
 
-    // POST /books/import/isbn/{isbn}
+  // POST /books/import/isbn/{isbn}
     [HttpPost("import/isbn/{isbn}")]
     public async Task<ActionResult<object>> ImportBookByIsbn(string isbn)
     {
-        try
+     try
         {
-            if (string.IsNullOrWhiteSpace(isbn))
+  if (string.IsNullOrWhiteSpace(isbn))
             {
-                return BadRequest(new { error = "ISBN cannot be empty." });
-            }
+    return BadRequest(new { error = "ISBN cannot be empty." });
+        }
 
             var book = await _bookService.ImportByIsbnAsync(isbn);
-            
-            if (book == null)
+ 
+          if (book == null)
+     {
+       return NotFound(new { error = $"Book with ISBN {isbn} not found in external sources." });
+   }
+
+         return CreatedAtAction(
+    nameof(GetBook),
+      new { id = book.Id },
+  book
+        );
+    }
+        catch (Exception ex)
+        {
+       return Problem(
+        detail: ex.Message,
+    title: "Error importing book",
+  statusCode: StatusCodes.Status500InternalServerError
+  );
+        }
+    }
+
+    // PUT /books/{id}
+    [HttpPut("{id}")]
+    public async Task<ActionResult<object>> UpdateBook(int id, [FromBody] UpdateBookDto dto)
+    {
+        try
+        {
+    if (id <= 0)
             {
-                return NotFound(new { error = $"Book with ISBN {isbn} not found in external sources." });
+             return BadRequest(new { error = "Invalid book ID. ID must be greater than 0." });
+   }
+
+            // Validate input
+     if (string.IsNullOrWhiteSpace(dto.Title))
+      {
+      return BadRequest(new { error = "Title cannot be empty." });
             }
 
-            return CreatedAtAction(
-                nameof(GetBook),
-                new { id = book.Id },
-                book
-            );
+ if (string.IsNullOrWhiteSpace(dto.Isbn))
+            {
+             return BadRequest(new { error = "ISBN cannot be empty." });
+        }
+
+          if (dto.AuthorId <= 0)
+     {
+       return BadRequest(new { error = "Invalid author ID." });
+      }
+
+   // Validate that the author exists
+   var author = await _authorService.GetAsync(dto.AuthorId);
+       if (author == null)
+         {
+         return BadRequest(new { error = $"Author with ID {dto.AuthorId} does not exist." });
+  }
+
+    var book = await _bookService.UpdateAsync(
+  id,
+ dto.Title,
+  dto.Year,
+    dto.AuthorId,
+       dto.Isbn,
+         dto.PublisherId
+    );
+            
+  if (book == null)
+    {
+          return NotFound(new { error = $"Book with ID {id} not found." });
+ }
+
+            return Ok(book);
+        }
+  catch (Exception ex)
+        {
+       return Problem(
+       detail: ex.Message,
+     title: "Error updating book",
+   statusCode: StatusCodes.Status500InternalServerError
+ );
+     }
+    }
+
+    // DELETE /books/{id}
+    [HttpDelete("{id}")]
+    public async Task<ActionResult> DeleteBook(int id)
+    {
+        try
+        {
+    if (id <= 0)
+     {
+          return BadRequest(new { error = "Invalid book ID. ID must be greater than 0." });
+   }
+
+         var result = await _bookService.DeleteAsync(id);
+     
+   if (!result)
+  {
+       return NotFound(new { error = $"Book with ID {id} not found." });
+        }
+
+            return NoContent();
         }
         catch (Exception ex)
         {
-            return Problem(
-                detail: ex.Message,
-                title: "Error importing book",
-                statusCode: StatusCodes.Status500InternalServerError
-            );
+          return Problem(
+   detail: ex.Message,
+         title: "Error deleting book",
+        statusCode: StatusCodes.Status500InternalServerError
+          );
         }
     }
 }

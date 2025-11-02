@@ -11,5 +11,6 @@ public record GoogleBookInfo(
     string? Thumbnail,
     string? Small,
     string? Medium,
-    string? Large
+    string? Large,
+    string? Isbn
 );
