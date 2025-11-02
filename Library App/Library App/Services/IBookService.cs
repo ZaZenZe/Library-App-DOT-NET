@@ -10,7 +10,7 @@ public interface IBookService
     Task<Book?> GetByIsbnAsync(string isbn);
     Task<Book> CreateAsync(string title, int year, int authorId, string isbn, int? publisherId);
     Task<Book?> ImportByIsbnAsync(string isbn);
-    Task<Book?> UpdateAsync(int id, string title, int year, int authorId, string isbn, int? publisherId);
+    Task<Book?> UpdateAsync(int id, UpdateBookDto dto);
     Task<bool> DeleteAsync(int id);
     Task<List<BookSearchResultDto>> SearchByTitleAsync(string title, int maxResults = 10);
 }

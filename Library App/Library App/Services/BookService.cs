@@ -135,20 +135,42 @@ public class BookService : IBookService
             .FirstAsync(b => b.Id == book.Id);
     }
 
-    public async Task<Book?> UpdateAsync(int id, string title, int year, int authorId, string isbn, int? publisherId)
+    public async Task<Book?> UpdateAsync(int id, UpdateBookDto dto)
     {
-        var book = await _context.Books.FindAsync(id);
-        
+        var book = await _context.Books
+            .Include(b => b.Details)
+            .FirstOrDefaultAsync(b => b.Id == id);
+      
         if (book == null)
         {
             return null;
         }
 
-        book.Title = title;
-        book.Year = year;
-        book.AuthorId = authorId;
-        book.Isbn = isbn;
-        book.PublisherId = publisherId;
+        book.Title = dto.Title;
+        book.Year = dto.Year;
+        book.AuthorId = dto.AuthorId;
+        book.Isbn = dto.Isbn;
+        book.PublisherId = dto.PublisherId;
+
+        // Update or create BookDetails
+        if (!string.IsNullOrWhiteSpace(dto.Description) || !string.IsNullOrWhiteSpace(dto.Thumbnail))
+        {
+            if (book.Details == null)
+            {
+                book.Details = new BookDetails { BookId = id };
+                _context.BookDetails.Add(book.Details);
+            }
+   
+            if (!string.IsNullOrWhiteSpace(dto.Description))
+            {
+                book.Details.Description = dto.Description;
+            }
+            
+            if (!string.IsNullOrWhiteSpace(dto.Thumbnail))
+            {
+                book.Details.Thumbnail = dto.Thumbnail;
+            }
+        }
 
         await _context.SaveChangesAsync();
 
