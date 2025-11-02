@@ -13,8 +13,8 @@ public class BookService : IBookService
     private readonly IGoogleBooksService _googleBooksService;
 
     public BookService(
-        Library_AppContext context, 
-        IAuthorService authorService, 
+        Library_AppContext context,
+        IAuthorService authorService,
         IPublisherService publisherService,
         IGoogleBooksService googleBooksService)
     {
@@ -54,20 +54,38 @@ public class BookService : IBookService
             .FirstOrDefaultAsync(b => b.Isbn == isbn);
     }
 
-    public async Task<Book> CreateAsync(string title, int year, int authorId, string isbn, int? publisherId)
+    public async Task<Book> CreateAsync(CreateBookDto dto)
     {
         var book = new Book
         {
-            Title = title,
-            Year = year,
-            AuthorId = authorId,
-            Isbn = isbn,
-            PublisherId = publisherId
+            Title = dto.Title,
+            Year = dto.Year,
+            AuthorId = dto.AuthorId,
+            Isbn = dto.Isbn,
+            PublisherId = dto.PublisherId
         };
 
         _context.Books.Add(book);
         await _context.SaveChangesAsync();
-        
+
+        // Create book details if provided
+        if (!string.IsNullOrWhiteSpace(dto.Description) ||
+            !string.IsNullOrWhiteSpace(dto.Thumbnail) ||
+            !string.IsNullOrWhiteSpace(dto.SmallThumbnail) ||
+            dto.AverageRating.HasValue)
+        {
+            var details = new BookDetails
+            {
+                BookId = book.Id,
+                Description = dto.Description,
+                AverageRating = dto.AverageRating,
+                SmallThumbnail = dto.SmallThumbnail,
+                Thumbnail = dto.Thumbnail
+            };
+            _context.BookDetails.Add(details);
+            await _context.SaveChangesAsync();
+        }
+
         // Reload with navigation properties
         return (await _context.Books
             .Include(b => b.Author)
@@ -108,24 +126,20 @@ public class BookService : IBookService
             publisherId = publisher.Id;
         }
 
-        // Create the book
-        var year = bookInfo.PublishedYear ??0;
-        var book = await CreateAsync(bookInfo.Title, year, author.Id, isbn, publisherId);
+        // Create the book with DTO
+        var createDto = new CreateBookDto(
+            Title: bookInfo.Title,
+            Year: bookInfo.PublishedYear ?? 0,
+            AuthorId: author.Id,
+            Isbn: isbn,
+            PublisherId: publisherId,
+            Description: bookInfo.Description,
+            AverageRating: bookInfo.AverageRating,
+            SmallThumbnail: bookInfo.SmallThumbnail,
+            Thumbnail: bookInfo.Thumbnail
+        );
 
-        // Save details
-        var details = new BookDetails
-        {
-            BookId = book.Id,
-            Description = bookInfo.Description,
-            AverageRating = bookInfo.AverageRating,
-            SmallThumbnail = bookInfo.SmallThumbnail,
-            Thumbnail = bookInfo.Thumbnail,
-            Small = bookInfo.Small,
-            Medium = bookInfo.Medium,
-            Large = bookInfo.Large
-        };
-        _context.BookDetails.Add(details);
-        await _context.SaveChangesAsync();
+        var book = await CreateAsync(createDto);
 
         // Return the created book including details
         return await _context.Books
@@ -140,7 +154,7 @@ public class BookService : IBookService
         var book = await _context.Books
             .Include(b => b.Details)
             .FirstOrDefaultAsync(b => b.Id == id);
-      
+
         if (book == null)
         {
             return null;
@@ -153,22 +167,35 @@ public class BookService : IBookService
         book.PublisherId = dto.PublisherId;
 
         // Update or create BookDetails
-        if (!string.IsNullOrWhiteSpace(dto.Description) || !string.IsNullOrWhiteSpace(dto.Thumbnail))
+        if (!string.IsNullOrWhiteSpace(dto.Description) ||
+            !string.IsNullOrWhiteSpace(dto.Thumbnail) ||
+            !string.IsNullOrWhiteSpace(dto.SmallThumbnail) ||
+            dto.AverageRating.HasValue)
         {
             if (book.Details == null)
             {
                 book.Details = new BookDetails { BookId = id };
                 _context.BookDetails.Add(book.Details);
             }
-   
+
             if (!string.IsNullOrWhiteSpace(dto.Description))
             {
                 book.Details.Description = dto.Description;
             }
-            
+
             if (!string.IsNullOrWhiteSpace(dto.Thumbnail))
             {
                 book.Details.Thumbnail = dto.Thumbnail;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.SmallThumbnail))
+            {
+                book.Details.SmallThumbnail = dto.SmallThumbnail;
+            }
+
+            if (dto.AverageRating.HasValue)
+            {
+                book.Details.AverageRating = dto.AverageRating;
             }
         }
 
@@ -181,7 +208,7 @@ public class BookService : IBookService
     public async Task<bool> DeleteAsync(int id)
     {
         var book = await _context.Books.FindAsync(id);
-        
+
         if (book == null)
         {
             return false;
@@ -196,19 +223,19 @@ public class BookService : IBookService
     {
         // Search Google Books API for books with this title
         var googleBooks = await _googleBooksService.SearchByTitleAsync(title, maxResults);
-        
-      // Convert GoogleBookInfo to BookSearchResultDto - NO DATABASE OPERATIONS
-    var searchResults = googleBooks.Select(bookInfo => new BookSearchResultDto(
-          Title: bookInfo.Title,
-            Authors: bookInfo.Authors,
-     Publisher: bookInfo.Publisher,
-   Year: bookInfo.PublishedYear,
-            Isbn: bookInfo.Isbn,
-          Description: bookInfo.Description,
-   AverageRating: bookInfo.AverageRating,
-            Thumbnail: bookInfo.Thumbnail ?? bookInfo.SmallThumbnail
-   )).ToList();
 
-return searchResults;
+        // Convert GoogleBookInfo to BookSearchResultDto - NO DATABASE OPERATIONS
+        var searchResults = googleBooks.Select(bookInfo => new BookSearchResultDto(
+            Title: bookInfo.Title,
+            Authors: bookInfo.Authors,
+            Publisher: bookInfo.Publisher,
+            Year: bookInfo.PublishedYear,
+            Isbn: bookInfo.Isbn,
+            Description: bookInfo.Description,
+            AverageRating: bookInfo.AverageRating,
+            Thumbnail: bookInfo.Thumbnail ?? bookInfo.SmallThumbnail
+        )).ToList();
+
+        return searchResults;
     }
 }
