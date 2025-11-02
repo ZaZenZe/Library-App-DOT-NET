@@ -60,13 +60,17 @@ public class GoogleBooksService : IGoogleBooksService
         }
     }
 
-    public async Task<List<GoogleBookInfo>> SearchByTitleAsync(string title)
+    public async Task<List<GoogleBookInfo>> SearchByTitleAsync(string title, int maxResults = 10)
     {
         try
         {
+            // Google Books API has a max limit of 40 results per request
+            // Clamp the value between 1 and 40
+            maxResults = Math.Clamp(maxResults, 1, 40);
+            
             // Encode the title for URL
             var encodedTitle = Uri.EscapeDataString(title);
-            var url = $"https://www.googleapis.com/books/v1/volumes?q=intitle:{encodedTitle}&maxResults=10";
+            var url = $"https://www.googleapis.com/books/v1/volumes?q=intitle:{encodedTitle}&maxResults={maxResults}";
             var response = await _httpClient.GetAsync(url);
 
             if (!response.IsSuccessStatusCode)

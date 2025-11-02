@@ -1,5 +1,6 @@
 using Library_App.Data;
 using Library_App.Models;
+using Library_App.DTOs;
 using Microsoft.EntityFrameworkCore;
 
 namespace Library_App.Services;
@@ -169,88 +170,23 @@ public class BookService : IBookService
         return true;
     }
 
-    public async Task<List<Book>> SearchByTitleAsync(string title)
+    public async Task<List<BookSearchResultDto>> SearchByTitleAsync(string title, int maxResults = 10)
     {
         // Search Google Books API for books with this title
-        var googleBooks = await _googleBooksService.SearchByTitleAsync(title);
+        var googleBooks = await _googleBooksService.SearchByTitleAsync(title, maxResults);
         
-        var books = new List<Book>();
-        
-        foreach (var bookInfo in googleBooks)
-        {
-            // Check if the book already exists in our database by title
-            var existingBook = await _context.Books
-                .Include(b => b.Author)
-                .Include(b => b.Publisher)
-                .Include(b => b.Details)
-                .FirstOrDefaultAsync(b => b.Title == bookInfo.Title);
-       
-            if (existingBook != null)
-            {
-                books.Add(existingBook);
-                continue;
-            }
+      // Convert GoogleBookInfo to BookSearchResultDto - NO DATABASE OPERATIONS
+    var searchResults = googleBooks.Select(bookInfo => new BookSearchResultDto(
+          Title: bookInfo.Title,
+            Authors: bookInfo.Authors,
+     Publisher: bookInfo.Publisher,
+   Year: bookInfo.PublishedYear,
+            Isbn: bookInfo.Isbn,
+          Description: bookInfo.Description,
+   AverageRating: bookInfo.AverageRating,
+            Thumbnail: bookInfo.Thumbnail ?? bookInfo.SmallThumbnail
+   )).ToList();
 
-            // Create new book from Google Books data
-            // Get or create author (use first author from the list)
-            var authorName = bookInfo.Authors.FirstOrDefault() ?? "Unknown Author";
-            var author = await _authorService.GetByNameOrCreateAsync(authorName);
-
-            // Get or create publisher if available
-            int? publisherId = null;
-            if (!string.IsNullOrEmpty(bookInfo.Publisher))
-            {
-                var publisher = await _publisherService.GetByNameOrCreateAsync(bookInfo.Publisher);
-                publisherId = publisher.Id;
-            }
-
-            // Use ISBN or generate a placeholder
-            var isbn = bookInfo.Isbn ?? $"TEMP-{Guid.NewGuid().ToString().Substring(0, 10)}";
- 
-            // Create the book
-            var year = bookInfo.PublishedYear ?? 0;
-            var book = new Book
-            {
-                Title = bookInfo.Title,
-                Year = year,
-                AuthorId = author.Id,
-                Isbn = isbn,
-                PublisherId = publisherId
-            };
-
-            _context.Books.Add(book);
-            await _context.SaveChangesAsync();
-
-            // Save details if available
-            if (bookInfo.Description != null || bookInfo.AverageRating != null || 
-                bookInfo.SmallThumbnail != null || bookInfo.Thumbnail != null ||
-                bookInfo.Small != null || bookInfo.Medium != null || bookInfo.Large != null)
-            {
-                var details = new BookDetails
-                {
-                    BookId = book.Id,
-                    Description = bookInfo.Description,
-                    AverageRating = bookInfo.AverageRating,
-                    SmallThumbnail = bookInfo.SmallThumbnail,
-                    Thumbnail = bookInfo.Thumbnail,
-                    Small = bookInfo.Small,
-                    Medium = bookInfo.Medium,
-                    Large = bookInfo.Large
-                };
-                _context.BookDetails.Add(details);
-                await _context.SaveChangesAsync();
-            }
-
-            // Reload with navigation properties
-            var createdBook = await _context.Books
-                .Include(b => b.Author)
-                .Include(b => b.Publisher)
-                .Include(b => b.Details)
-                .FirstAsync(b => b.Id == book.Id);
-      
-            books.Add(createdBook);
-        }
-
-        return books;
+return searchResults;
     }
 }

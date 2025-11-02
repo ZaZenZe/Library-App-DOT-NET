@@ -1,4 +1,5 @@
 using Library_App.Models;
+using Library_App.DTOs;
 
 namespace Library_App.Services;
 
@@ -11,5 +12,5 @@ public interface IBookService
     Task<Book?> ImportByIsbnAsync(string isbn);
     Task<Book?> UpdateAsync(int id, string title, int year, int authorId, string isbn, int? publisherId);
     Task<bool> DeleteAsync(int id);
-    Task<List<Book>> SearchByTitleAsync(string title);
+    Task<List<BookSearchResultDto>> SearchByTitleAsync(string title, int maxResults = 10);
 }
